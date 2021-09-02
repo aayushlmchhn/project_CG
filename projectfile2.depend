@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1630468774 source:d:\projectfile2\main.cpp
+1630575347 source:d:\projectfile2\main.cpp
 	<Windows.h>
 	<GL\GL.h>
 	<GL\GLU.h>

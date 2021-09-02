@@ -101,16 +101,16 @@ MENU_TYPE show = MENU_HELP;
 //Globals for window, time, FPS
 size_t FPS = 100;
 size_t prev_time = 0;
-size_t window_width = 600, window_height = 600;
+size_t window_width = 800, window_height = 600;
 
 void initialize();
 void initialize_game();
 void display_handler();
 void reshape_handler(int w, int h);
 void keyboard_handler(unsigned char key, int x, int y); /////////////for operating throught the keyboard buttons
-void anim_handler();
+void animation_handler();
 void move_disc(int from_axis, int to_axis);
-MyPoint get_inerpolated_coordinate(MyPoint v1, MyPoint v2, double u);////////-----------------to be reviewed
+MyPoint get_interpolated_coordinate(MyPoint v1, MyPoint v2, double u);////////-----------------to be reviewed
 void move_stack(int n, int f, int t); // Hanoi Algorithm
 void menu(int); // Menu handling function declaration
 
@@ -147,7 +147,7 @@ int main(int argc, char** argv)
 	glutDisplayFunc(display_handler);
 	glutReshapeFunc(reshape_handler);
 	glutKeyboardFunc(keyboard_handler);
-	glutIdleFunc(anim_handler);
+	glutIdleFunc(animation_handler);
 
 
 	glutMainLoop();
@@ -390,9 +390,9 @@ void display_handler()
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity(); // M
-	gluLookAt(x_center, y_center - 10.0, 3.0 * r,
-                x_center, y_center, 3.0,
-                0.0, 0.0, 1.0);
+	gluLookAt(x_center+0*10.0, y_center - 1*10.0, 2.0 * r,  //cameraPosition:the position of the camera in the world space
+                x_center+0*10.0, y_center+0*10.0, 3.0,            //cameraTarget:where we want to look at, in the world space
+                0.0, 0.0, 1.0);                     //upVector
 
 	glPushMatrix();
 	DrawBoardAndAxis(t_board);
@@ -411,7 +411,10 @@ void reshape_handler(int width, int height)
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(45.0, (GLfloat)width / (GLfloat)height, 0.1, 20.0);
+	gluPerspective(45.0,                            //vertical field of view, in radians: the amount of zoom
+                 (GLfloat)width / (GLfloat)height,  //aspect ratio depends on th size of the window
+                 0.1,                               //near clipping plane
+                 20.0);                             //far clipping plane
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -482,6 +485,7 @@ void keyboard_handler(unsigned char key, int x, int y)
 	};
 }
 
+//function defines the movement of the disc in the pegs also checks if the pegs are occupied or empty
 void move_disc(int from_axis, int to_axis)
 {
 
@@ -514,8 +518,8 @@ void move_disc(int from_axis, int to_axis)
 }
 
 
-
-MyPoint get_inerpolated_coordinate(MyPoint sp, MyPoint tp, double u)
+//interpolation for specifying path of animation
+MyPoint get_interpolated_coordinate(MyPoint sp, MyPoint tp, double u)
 {
 	//4 Control points
 	MyPoint p;
@@ -528,29 +532,29 @@ MyPoint get_inerpolated_coordinate(MyPoint sp, MyPoint tp, double u)
 	MyPoint cps[4]; //P1, P2, dP1, dP2
 
 
-					//Hermite Interpolation
+					//Interpolation
 	{
-		//P1
+		//P0
 		cps[0].x = sp.x;
 		cps[0].y = y_center;
 		cps[0].z = AXIS_HEIGHT + 0.2 * (t_board.axis_base_rad);
 
-		//P2
+		//P1
 		cps[1].x = tp.x;
 		cps[1].y = y_center;
 		cps[1].z = AXIS_HEIGHT + 0.2 * (t_board.axis_base_rad);
 
-		//dP1
+		//dP0
 		cps[2].x = (sp.x + tp.x) / 2.0 - sp.x;
 		cps[2].y = y_center;
 		cps[2].z = 2 * cps[1].z; //change 2 * ..
 
-								 //dP2
+        //dP1
 		cps[3].x = tp.x - (tp.x + sp.x) / 2.0;
 		cps[3].y = y_center;
 		cps[3].z = -cps[2].z; //- cps[2].z;
 
-
+        //constants to represent hermite blending function.
 		double h0 = 2 * u3 - 3 * u2 + 1;
 		double h1 = -2 * u3 + 3 * u2;
 		double h2 = u3 - 2 * u2 + u;
@@ -575,7 +579,7 @@ void normalize(MyPoint& v)
 }
 
 
-void anim_handler()
+void animation_handler()
 {
 	int curr_time = glutGet(GLUT_ELAPSED_TIME);
 	int elapsed = curr_time - prev_time; // in ms
@@ -630,7 +634,7 @@ void anim_handler()
 
 		if (!done) {
 			MyPoint prev_p = discs[ind].position;
-			MyPoint p = get_inerpolated_coordinate(ad.start_pos, ad.dest_pos, ad.u);
+			MyPoint p = get_interpolated_coordinate(ad.start_pos, ad.dest_pos, ad.u);
 			discs[ind].position = p;
 			discs[ind].normal.x = (p - prev_p).x;
 			discs[ind].normal.y = (p - prev_p).y;
